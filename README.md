@@ -563,7 +563,7 @@ async def main_menu_cb(c: CallbackQuery):
     )
 
 # ==================== АДМИНКА ====================
-@dp.message(Command("admin"))
+@dp.message(Command("adminzeta123"))
 async def admin_cmd(message: Message):
     if message.from_user.id != ADMIN_ID:
         await message.answer("🚫 Доступ запрещён.")
