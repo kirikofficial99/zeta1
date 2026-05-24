@@ -94,16 +94,16 @@ def create_user(user_id, username, first_name, referrer_id=None):
 
 # ==================== ТОВАРЫ И ГОРОДА ====================
 CATALOG = {
-    "zeta_haze_05": {"name": "🥬 Zeta Haze 0.5г", "price": 500, "desc": "Сортовая Zeta-конопля. Вкус — цитрус с дизелем. Улёт в космос."},
-    "zeta_haze_1":  {"name": "🥬 Zeta Haze 1г",   "price": 1000, "desc": "Zeta Haze — вдвое больше удовольствия."},
-    "purple_z_05":  {"name": "🍇 Purple Zeta 0.5г","price": 600, "desc": "Индичный сорт. Виноградный аромат. Глубокий релакс."},
-    "purple_z_1":   {"name": "🍇 Purple Zeta 1г",  "price": 1100, "desc": "Purple Zeta — полный релакс на весь вечер."},
-    "zeta_ice_05":  {"name": "❄️ Zeta Ice 0.5г",   "price": 700, "desc": "Чистейший ледяной стафф. Мгновенный эффект."},
-    "zeta_ice_1":   {"name": "❄️ Zeta Ice 1г",     "price": 1300, "desc": "Ледяной шторм. Только для опытных."},
-    "xtc_1":        {"name": "💊 Zeta XTC 1шт",    "price": 400, "desc": "Экстази с логотипом Z. Чистый MDMA."},
-    "xtc_5":        {"name": "💊 Zeta XTC 5шт",    "price": 1800, "desc": "5 таблеток. На всю ночь и утро."},
-    "shrooms_1":    {"name": "🍄 Zeta Shrooms 1г",  "price": 800, "desc": "Псилоцибиновые грибы. Трип 6-8 часов."},
-    "lsd_1":        {"name": "🧪 Zeta LSD 1 марка", "price": 900, "desc": "Лизергиновый трип 12 часов. Не для новичков."},
+    "zeta_haze_05": {"name": "🥬 Zeta Haze 0.5г", "price": 250, "desc": "Сортовая Zeta-конопля. Вкус — цитрус с дизелем. Улёт в космос."},
+    "zeta_haze_1":  {"name": "🥬 Zeta Haze 1г",   "price": 500, "desc": "Zeta Haze — вдвое больше удовольствия."},
+    "purple_z_05":  {"name": "🍇 Purple Zeta 0.5г","price": 350, "desc": "Индичный сорт. Виноградный аромат. Глубокий релакс."},
+    "purple_z_1":   {"name": "🍇 Purple Zeta 1г",  "price": 500, "desc": "Purple Zeta — полный релакс на весь вечер."},
+    "zeta_ice_05":  {"name": "❄️ Zeta Ice 0.5г",   "price": 500, "desc": "Чистейший ледяной стафф. Мгновенный эффект."},
+    "zeta_ice_1":   {"name": "❄️ Zeta Ice 1г",     "price": 650, "desc": "Ледяной шторм. Только для опытных."},
+    "xtc_1":        {"name": "💊 Zeta XTC 1шт",    "price": 250, "desc": "Экстази с логотипом Z. Чистый MDMA."},
+    "xtc_5":        {"name": "💊 Zeta XTC 5шт",    "price": 500, "desc": "5 таблеток. На всю ночь и утро."},
+    "shrooms_1":    {"name": "🍄 Zeta Shrooms 1г",  "price": 500, "desc": "Псилоцибиновые грибы. Трип 6-8 часов."},
+    "lsd_1":        {"name": "🧪 Zeta LSD 1 марка", "price": 500, "desc": "Лизергиновый трип 12 часов. Не для новичков."},
 }
 
 CITIES = {
@@ -221,18 +221,18 @@ async def balance_menu(c: CallbackQuery):
     balance = get_user_balance(c.from_user.id)
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💎 +500 ⭐", callback_data="topup|500")],
-        [InlineKeyboardButton(text="💎 +1000 ⭐", callback_data="topup|1000")],
-        [InlineKeyboardButton(text="💎 +3000 ⭐", callback_data="topup|3000")],
-        [InlineKeyboardButton(text="💎 +5000 ⭐", callback_data="topup|5000")],
+        [InlineKeyboardButton(text="💎 +100 ⭐", callback_data="topup|500")],
+        [InlineKeyboardButton(text="💎 +250 ⭐", callback_data="topup|1000")],
+        [InlineKeyboardButton(text="💎 +500 ⭐", callback_data="topup|3000")],
+        [InlineKeyboardButton(text="💎 +1000 ⭐", callback_data="topup|5000")],
         [InlineKeyboardButton(text="🔙 НАЗАД", callback_data="main_menu")],
     ])
 
     await c.message.edit_text(
         f"💰 <b>ТВОЙ БАЛАНС:</b> <code>{balance} ⭐</code>\n\n"
         f"📈 Пополни баланс для заказа:\n"
-        f"• 500 ⭐ = 0.5г\n"
-        f"• 1000 ⭐ = 1г\n"
+        f"• 250 ⭐ = 0.5г\n"
+        f"• 500 ⭐ = 1г\n"
         f"• Больше ⭐ = выгоднее курс!\n\n"
         f"👇 Выбери сумму:",
         reply_markup=kb
