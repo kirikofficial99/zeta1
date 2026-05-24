@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 TOKEN = "8912412788:AAH-x35pYYW9gRUN9Pblhf6DtfvqSHKJiUY"
 ADMIN_ID = 7832555448
 CURATOR_USERNAME = "atlanov_bot"
+ADMIN_COMMAND = "adminzeta123"
 
 # ==================== БАЗА ДАННЫХ ====================
 def init_db():
@@ -67,10 +68,16 @@ def init_db():
 def get_user(user_id):
     conn = sqlite3.connect("zeta.db")
     c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+    c.execute("SELECT user_id, username, first_name, balance_stars, total_spent, orders_count, referrer_id, referral_bonus_claimed, referral_code, joined_at FROM users WHERE user_id = ?", (user_id,))
     user = c.fetchone()
     conn.close()
     return user
+
+def get_user_balance(user_id):
+    user = get_user(user_id)
+    if user:
+        return user[3]  # balance_stars — 4-й элемент (индекс 3)
+    return 0
 
 def create_user(user_id, username, first_name, referrer_id=None):
     conn = sqlite3.connect("zeta.db")
@@ -99,7 +106,6 @@ CATALOG = {
     "lsd_1":        {"name": "🧪 Zeta LSD 1 марка", "price": 900, "desc": "Лизергиновый трип 12 часов. Не для новичков."},
 }
 
-# Координаты центров городов для генерации случайных точек
 CITIES = {
     "msk": {"name": "Москва", "lat": 55.7558, "lon": 37.6173,
             "districts": ["ЦАО", "САО", "ЮАО", "ВАО", "ЗАО", "СВАО"]},
@@ -134,9 +140,7 @@ HIDE_DESCS = [
 ]
 
 def generate_coordinates(city_key):
-    """Генерирует случайные координаты в радиусе ~5км от центра города"""
     city = CITIES[city_key]
-    # ±0.05 градуса ≈ 5км
     lat = round(city["lat"] + random.uniform(-0.05, 0.05), 6)
     lon = round(city["lon"] + random.uniform(-0.05, 0.05), 6)
     return lat, lon
@@ -214,8 +218,7 @@ async def show_item(c: CallbackQuery):
 # ==================== БАЛАНС ====================
 @dp.callback_query(F.data == "balance_menu")
 async def balance_menu(c: CallbackQuery):
-    user = get_user(c.from_user.id)
-    balance = user[2] if user else 0
+    balance = get_user_balance(c.from_user.id)
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💎 +500 ⭐", callback_data="topup_500")],
@@ -291,14 +294,10 @@ async def payment_success(message: Message):
 async def buy_start(c: CallbackQuery):
     item_id = c.data.replace("buy_", "")
     item = CATALOG[item_id]
-    user = get_user(c.from_user.id)
+    balance = get_user_balance(c.from_user.id)
 
-    if not user:
-        await c.answer("❌ Ты не зарегистрирован. Напиши /start", show_alert=True)
-        return
-
-    if user[2] < item["price"]:
-        await c.answer(f"❌ НЕДОСТАТОЧНО ЗВЁЗД!\n\nНужно: {item['price']} ⭐\nТвой баланс: {user[2]} ⭐\n\nПополни баланс в разделе 💰 БАЛАНС", show_alert=True)
+    if balance < item["price"]:
+        await c.answer(f"❌ НЕДОСТАТОЧНО ЗВЁЗД!\n\nНужно: {item['price']} ⭐\nТвой баланс: {balance} ⭐\n\nПополни баланс в разделе 💰 БАЛАНС", show_alert=True)
         return
 
     kb = []
@@ -329,15 +328,11 @@ async def confirm_order(c: CallbackQuery):
     _, item_id, city_key, district = c.data.split("_", 3)
     item = CATALOG[item_id]
     city = CITIES[city_key]
-    user = get_user(c.from_user.id)
-
-    if not user:
-        await c.answer("❌ Ошибка. Напиши /start", show_alert=True)
-        return
+    balance = get_user_balance(c.from_user.id)
 
     # Финальная проверка баланса
-    if user[2] < item["price"]:
-        await c.answer(f"❌ НЕДОСТАТОЧНО ЗВЁЗД!\n\nНужно: {item['price']} ⭐\nТвой баланс: {user[2]} ⭐", show_alert=True)
+    if balance < item["price"]:
+        await c.answer(f"❌ НЕДОСТАТОЧНО ЗВЁЗД!\n\nНужно: {item['price']} ⭐\nТвой баланс: {balance} ⭐", show_alert=True)
         return
 
     # Списываем звёзды
@@ -364,10 +359,10 @@ async def confirm_order(c: CallbackQuery):
                 (c.from_user.id, c.from_user.username, item["name"], item["price"], city["name"], district, full_addr, lat, lon, hide_desc))
     order_id = cur.lastrowid
 
-    # Система лояльности: +200 ⭐ за каждые 5000 потраченных
-    total_spent = (user[3] or 0) + item["price"]
-    old_loyalty = (user[3] or 0) // 5000
-    new_loyalty = total_spent // 5000
+    # Система лояльности
+    total_spent_after = (get_user(c.from_user.id)[4] or 0) + item["price"]
+    old_loyalty = (get_user(c.from_user.id)[4] or 0) // 5000
+    new_loyalty = total_spent_after // 5000
     loyalty_bonus = 0
     if new_loyalty > old_loyalty:
         loyalty_bonus = (new_loyalty - old_loyalty) * 200
@@ -474,7 +469,7 @@ async def copy_ref(c: CallbackQuery):
 @dp.callback_query(F.data == "promo_menu")
 async def promo_menu(c: CallbackQuery):
     user = get_user(c.from_user.id)
-    total_spent = user[3] if user else 0
+    total_spent = user[4] if user else 0
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🎟️ СОЗДАТЬ ПРОМОКОД (скидка 15%)", callback_data="create_promo")],
@@ -494,7 +489,7 @@ async def promo_menu(c: CallbackQuery):
 @dp.callback_query(F.data == "create_promo")
 async def create_promo(c: CallbackQuery):
     user = get_user(c.from_user.id)
-    total_spent = user[3] if user else 0
+    total_spent = user[4] if user else 0
 
     if total_spent < 1000:
         await c.answer("❌ Недостаточно! Нужно потратить минимум 1000 ⭐ для создания промокода.", show_alert=True)
@@ -563,11 +558,10 @@ async def main_menu_cb(c: CallbackQuery):
     )
 
 # ==================== АДМИНКА ====================
-@dp.message(Command("adminzeta123"))
+@dp.message(Command(ADMIN_COMMAND))
 async def admin_cmd(message: Message):
     if message.from_user.id != ADMIN_ID:
-        await message.answer("🚫 Доступ запрещён.")
-        return
+        return  # Тихо игнорируем чужих
 
     args = message.text.split()
 
@@ -575,17 +569,17 @@ async def admin_cmd(message: Message):
         txt = (
             "🔐 <b>АДМИН-ПАНЕЛЬ ZETA SHOP</b>\n\n"
             "<b>Команды:</b>\n"
-            "/admin stats — общая статистика\n"
-            "/admin orders — последние 10 заказов\n"
-            "/admin order 123 — детали заказа по номеру\n"
-            "/admin search Москва — поиск заказов по городу\n"
-            "/admin users — топ-10 юзеров по расходам\n"
-            "/admin user 123456 — вся инфа о юзере\n"
-            "/admin promo — все активные промокоды\n"
-            "/admin broadcast текст — рассылка всем юзерам\n"
-            "/admin addbalance 123456 500 — начислить ⭐ юзеру\n"
-            "/admin delorder 123 — удалить заказ из базы\n"
-            "/admin export — экспорт всех заказов в текстовом виде"
+            f"/{ADMIN_COMMAND} stats — общая статистика\n"
+            f"/{ADMIN_COMMAND} orders — последние 10 заказов\n"
+            f"/{ADMIN_COMMAND} order 123 — детали заказа по номеру\n"
+            f"/{ADMIN_COMMAND} search Москва — поиск заказов по городу\n"
+            f"/{ADMIN_COMMAND} users — топ-10 юзеров по расходам\n"
+            f"/{ADMIN_COMMAND} user 123456 — вся инфа о юзере\n"
+            f"/{ADMIN_COMMAND} promo — все активные промокоды\n"
+            f"/{ADMIN_COMMAND} broadcast текст — рассылка всем юзерам\n"
+            f"/{ADMIN_COMMAND} addbalance 123456 500 — начислить ⭐ юзеру\n"
+            f"/{ADMIN_COMMAND} delorder 123 — удалить заказ из базы\n"
+            f"/{ADMIN_COMMAND} export — экспорт всех заказов"
         )
         await message.answer(txt)
 
@@ -641,7 +635,7 @@ async def admin_cmd(message: Message):
         try:
             order_id = int(args[2])
         except:
-            await message.answer("❌ Неверный номер заказа. Пример: /admin order 123")
+            await message.answer("❌ Неверный номер заказа.")
             return
 
         conn = sqlite3.connect("zeta.db")
@@ -705,7 +699,7 @@ async def admin_cmd(message: Message):
         try:
             uid = int(args[2])
         except:
-            await message.answer("❌ Неверный ID. Пример: /admin user 123456789")
+            await message.answer("❌ Неверный ID.")
             return
 
         user = get_user(uid)
@@ -782,12 +776,11 @@ async def admin_cmd(message: Message):
             uid = int(args[2])
             amount = int(args[3])
         except:
-            await message.answer("❌ Формат: /admin addbalance ID СУММА\nПример: /admin addbalance 123456789 500")
+            await message.answer("❌ Формат: /{ADMIN_COMMAND} addbalance ID СУММА")
             return
 
         user = get_user(uid)
         if not user:
-            await message.answer("❌ Юзер не найден. Создаю...")
             create_user(uid, "unknown", "unknown")
 
         conn = sqlite3.connect("zeta.db")
@@ -809,7 +802,7 @@ async def admin_cmd(message: Message):
         try:
             order_id = int(args[2])
         except:
-            await message.answer("❌ Формат: /admin delorder 123")
+            await message.answer("❌ Формат: /{ADMIN_COMMAND} delorder 123")
             return
 
         conn = sqlite3.connect("zeta.db")
@@ -843,7 +836,6 @@ async def admin_cmd(message: Message):
                 f"{o[5]}, {o[6]} | {o[7]} | {o[8]},{o[9]} | {o[12]}\n"
             )
 
-        # Разбиваем на части если слишком длинное
         if len(txt) > 4000:
             parts = [txt[i:i+4000] for i in range(0, len(txt), 4000)]
             for part in parts:
@@ -851,12 +843,16 @@ async def admin_cmd(message: Message):
         else:
             await message.answer(txt)
 
+    else:
+        await message.answer(f"❓ Неизвестная команда. /{ADMIN_COMMAND} — список команд.")
+
 # ==================== ЗАПУСК ====================
 async def main():
     init_db()
     print("🚀 ZETA SHOP ЗАПУЩЕН!")
     print(f"👑 Админ ID: {ADMIN_ID}")
     print(f"🤖 Куратор: @{CURATOR_USERNAME}")
+    print(f"🔐 Админ-команда: /{ADMIN_COMMAND}")
     print(f"📦 Товаров: {len(CATALOG)}")
     print(f"🏙️ Городов: {len(CITIES)}")
     print("=" * 40)
