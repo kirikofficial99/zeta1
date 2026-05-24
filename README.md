@@ -364,9 +364,8 @@ async def confirm_order(c: CallbackQuery):
     full_addr = f"г. {city['name']}, {street}, д. {house}{' ' + building if building else ''}"
     hide_desc = random.choice(HIDE_DESCS)
 
-    # Задержка закладки
-    delay_min = random.randint(10, 30)
-    ready_time = datetime.now() + timedelta(minutes=delay_min)
+    # Клад уже готов, время "закладки" было раньше
+    ready_time = datetime.now() - timedelta(minutes=random.randint(5, 60))
     ready_time_str = ready_time.strftime("%H:%M")
 
     cur.execute("""INSERT INTO orders (user_id, username, item, amount_stars, city, district, address, lat, lon, description, status)
@@ -393,8 +392,8 @@ async def confirm_order(c: CallbackQuery):
         f"💰 Сумма: <b>{item['price']} ⭐</b>\n"
         f"📍 Город: <b>{city['name']}</b>\n"
         f"🏘️ Район: <b>{district}</b>\n\n"
-        f"⏳ <b>Клад будет заложен через {delay_min} мин.</b>\n"
-        f"Ожидай до <b>{ready_time_str}</b>, затем забирай.\n\n"
+        f"⏳ <b>Клад был заложен в {ready_time_str}</b>\n"
+        f"Забери в течение 2 часов.\n\n"
         f"📌 <b>Адрес:</b> <code>{full_addr}</code>\n"
         f"🌐 <b>Координаты:</b> <code>{lat}, {lon}</code>\n"
         f"🔍 <b>Описание места:</b> {hide_desc}\n\n"
