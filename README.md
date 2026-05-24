@@ -221,10 +221,10 @@ async def balance_menu(c: CallbackQuery):
     balance = get_user_balance(c.from_user.id)
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💎 +100 ⭐", callback_data="topup|500")],
-        [InlineKeyboardButton(text="💎 +250 ⭐", callback_data="topup|1000")],
-        [InlineKeyboardButton(text="💎 +500 ⭐", callback_data="topup|3000")],
-        [InlineKeyboardButton(text="💎 +1000 ⭐", callback_data="topup|5000")],
+        [InlineKeyboardButton(text="💎 +100 ⭐", callback_data="topup|100")],
+        [InlineKeyboardButton(text="💎 +250 ⭐", callback_data="topup|250")],
+        [InlineKeyboardButton(text="💎 +500 ⭐", callback_data="topup|500")],
+        [InlineKeyboardButton(text="💎 +1000 ⭐", callback_data="topup|1000")],
         [InlineKeyboardButton(text="🔙 НАЗАД", callback_data="main_menu")],
     ])
 
