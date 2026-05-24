@@ -76,7 +76,7 @@ def get_user(user_id):
 def get_user_balance(user_id):
     user = get_user(user_id)
     if user:
-        return user[3]  # balance_stars — 4-й элемент (индекс 3)
+        return user[3]
     return 0
 
 def create_user(user_id, username, first_name, referrer_id=None):
@@ -193,17 +193,17 @@ async def start_cmd(message: Message):
 async def catalog(c: CallbackQuery):
     kb = []
     for k, v in CATALOG.items():
-        kb.append([InlineKeyboardButton(text=f"{v['name']} — {v['price']} ⭐", callback_data=f"item_{k}")])
+        kb.append([InlineKeyboardButton(text=f"{v['name']} — {v['price']} ⭐", callback_data=f"item|{k}")])
     kb.append([InlineKeyboardButton(text="🔙 НАЗАД", callback_data="main_menu")])
     await c.message.edit_text("🛒 <b>КАТАЛОГ ZETA SHOP</b>\n\nВыбери товар:", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb))
 
-@dp.callback_query(F.data.startswith("item_"))
+@dp.callback_query(F.data.startswith("item|"))
 async def show_item(c: CallbackQuery):
-    item_id = c.data.replace("item_", "")
+    item_id = c.data.split("|")[1]
     item = CATALOG[item_id]
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"💳 КУПИТЬ — {item['price']} ⭐", callback_data=f"buy_{item_id}")],
+        [InlineKeyboardButton(text=f"💳 КУПИТЬ — {item['price']} ⭐", callback_data=f"buy|{item_id}")],
         [InlineKeyboardButton(text="🔙 К КАТАЛОГУ", callback_data="catalog")],
     ])
 
@@ -221,10 +221,10 @@ async def balance_menu(c: CallbackQuery):
     balance = get_user_balance(c.from_user.id)
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💎 +500 ⭐", callback_data="topup_500")],
-        [InlineKeyboardButton(text="💎 +1000 ⭐", callback_data="topup_1000")],
-        [InlineKeyboardButton(text="💎 +3000 ⭐", callback_data="topup_3000")],
-        [InlineKeyboardButton(text="💎 +5000 ⭐", callback_data="topup_5000")],
+        [InlineKeyboardButton(text="💎 +500 ⭐", callback_data="topup|500")],
+        [InlineKeyboardButton(text="💎 +1000 ⭐", callback_data="topup|1000")],
+        [InlineKeyboardButton(text="💎 +3000 ⭐", callback_data="topup|3000")],
+        [InlineKeyboardButton(text="💎 +5000 ⭐", callback_data="topup|5000")],
         [InlineKeyboardButton(text="🔙 НАЗАД", callback_data="main_menu")],
     ])
 
@@ -238,9 +238,9 @@ async def balance_menu(c: CallbackQuery):
         reply_markup=kb
     )
 
-@dp.callback_query(F.data.startswith("topup_"))
+@dp.callback_query(F.data.startswith("topup|"))
 async def topup(c: CallbackQuery):
-    amount = int(c.data.replace("topup_", ""))
+    amount = int(c.data.split("|")[1])
 
     await bot.send_invoice(
         chat_id=c.from_user.id,
@@ -290,9 +290,9 @@ async def payment_success(message: Message):
     await bot.send_message(ADMIN_ID, f"💰 <b>+{amount} ⭐</b>\nОт: @{message.from_user.username}\nID: <code>{user_id}</code>")
 
 # ==================== ПОКУПКА ====================
-@dp.callback_query(F.data.startswith("buy_"))
+@dp.callback_query(F.data.startswith("buy|"))
 async def buy_start(c: CallbackQuery):
-    item_id = c.data.replace("buy_", "")
+    item_id = c.data.split("|")[1]
     item = CATALOG[item_id]
     balance = get_user_balance(c.from_user.id)
 
@@ -302,30 +302,45 @@ async def buy_start(c: CallbackQuery):
 
     kb = []
     for ck, cv in CITIES.items():
-        kb.append([InlineKeyboardButton(text=f"📍 {cv['name']}", callback_data=f"city_{item_id}_{ck}")])
-    kb.append([InlineKeyboardButton(text="🔙 К товару", callback_data=f"item_{item_id}")])
+        kb.append([InlineKeyboardButton(text=f"📍 {cv['name']}", callback_data=f"city|{item_id}|{ck}")])
+    kb.append([InlineKeyboardButton(text="🔙 К товару", callback_data=f"item|{item_id}")])
 
     await c.message.edit_text(f"📍 Выбери город для <b>{item['name']}</b>:", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb))
 
-@dp.callback_query(F.data.startswith("city_"))
+@dp.callback_query(F.data.startswith("city|"))
 async def choose_district(c: CallbackQuery):
-    _, item_id, city_key = c.data.split("_", 2)
-
+    parts = c.data.split("|")
+    if len(parts) != 3:
+        await c.answer("Ошибка данных")
+        return
+    
+    _, item_id, city_key = parts
+    
     if city_key not in CITIES:
-        await c.answer("Ошибка, попробуй снова.")
+        await c.answer("Город не найден")
         return
 
     city = CITIES[city_key]
     kb = []
     for d in city["districts"]:
-        kb.append([InlineKeyboardButton(text=f"🏘️ {d}", callback_data=f"dist_{item_id}_{city_key}_{d}")])
-    kb.append([InlineKeyboardButton(text="🔙 К выбору города", callback_data=f"buy_{item_id}")])
+        kb.append([InlineKeyboardButton(text=f"🏘️ {d}", callback_data=f"dist|{item_id}|{city_key}|{d}")])
+    kb.append([InlineKeyboardButton(text="🔙 К выбору города", callback_data=f"buy|{item_id}")])
 
     await c.message.edit_text(f"🏙️ <b>{city['name']}</b>\nВыбери район:", reply_markup=InlineKeyboardMarkup(inline_keyboard=kb))
 
-@dp.callback_query(F.data.startswith("dist_"))
+@dp.callback_query(F.data.startswith("dist|"))
 async def confirm_order(c: CallbackQuery):
-    _, item_id, city_key, district = c.data.split("_", 3)
+    parts = c.data.split("|")
+    if len(parts) != 4:
+        await c.answer("Ошибка данных")
+        return
+    
+    _, item_id, city_key, district = parts
+
+    if city_key not in CITIES or item_id not in CATALOG:
+        await c.answer("Ошибка данных")
+        return
+
     item = CATALOG[item_id]
     city = CITIES[city_key]
     balance = get_user_balance(c.from_user.id)
@@ -360,8 +375,9 @@ async def confirm_order(c: CallbackQuery):
     order_id = cur.lastrowid
 
     # Система лояльности
-    total_spent_after = (get_user(c.from_user.id)[4] or 0) + item["price"]
-    old_loyalty = (get_user(c.from_user.id)[4] or 0) // 5000
+    user = get_user(c.from_user.id)
+    total_spent_after = (user[4] or 0) + item["price"]
+    old_loyalty = (user[4] or 0) // 5000
     new_loyalty = total_spent_after // 5000
     loyalty_bonus = 0
     if new_loyalty > old_loyalty:
@@ -561,7 +577,7 @@ async def main_menu_cb(c: CallbackQuery):
 @dp.message(Command(ADMIN_COMMAND))
 async def admin_cmd(message: Message):
     if message.from_user.id != ADMIN_ID:
-        return  # Тихо игнорируем чужих
+        return
 
     args = message.text.split()
 
@@ -569,17 +585,17 @@ async def admin_cmd(message: Message):
         txt = (
             "🔐 <b>АДМИН-ПАНЕЛЬ ZETA SHOP</b>\n\n"
             "<b>Команды:</b>\n"
-            f"/{ADMIN_COMMAND} stats — общая статистика\n"
+            f"/{ADMIN_COMMAND} stats — статистика\n"
             f"/{ADMIN_COMMAND} orders — последние 10 заказов\n"
-            f"/{ADMIN_COMMAND} order 123 — детали заказа по номеру\n"
-            f"/{ADMIN_COMMAND} search Москва — поиск заказов по городу\n"
-            f"/{ADMIN_COMMAND} users — топ-10 юзеров по расходам\n"
-            f"/{ADMIN_COMMAND} user 123456 — вся инфа о юзере\n"
-            f"/{ADMIN_COMMAND} promo — все активные промокоды\n"
-            f"/{ADMIN_COMMAND} broadcast текст — рассылка всем юзерам\n"
-            f"/{ADMIN_COMMAND} addbalance 123456 500 — начислить ⭐ юзеру\n"
-            f"/{ADMIN_COMMAND} delorder 123 — удалить заказ из базы\n"
-            f"/{ADMIN_COMMAND} export — экспорт всех заказов"
+            f"/{ADMIN_COMMAND} order 123 — детали заказа\n"
+            f"/{ADMIN_COMMAND} search Москва — поиск\n"
+            f"/{ADMIN_COMMAND} users — топ-10 юзеров\n"
+            f"/{ADMIN_COMMAND} user 123456 — инфо о юзере\n"
+            f"/{ADMIN_COMMAND} promo — промокоды\n"
+            f"/{ADMIN_COMMAND} broadcast текст — рассылка\n"
+            f"/{ADMIN_COMMAND} addbalance 123456 500 — начислить ⭐\n"
+            f"/{ADMIN_COMMAND} delorder 123 — удалить заказ\n"
+            f"/{ADMIN_COMMAND} export — экспорт заказов"
         )
         await message.answer(txt)
 
